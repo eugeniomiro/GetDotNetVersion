@@ -12,7 +12,7 @@ public class GetDotNetVersion
     {
         const string subkey = @"SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full\";
 
-        using (var ndpKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry32).OpenSubKey(subkey))
+        using (var ndpKey = RegistryKey.OpenRemoteBaseKey(RegistryHive.LocalMachine, string.Empty).OpenSubKey(subkey))
         {
             if (ndpKey != null && ndpKey.GetValue("Release") != null)
             {
