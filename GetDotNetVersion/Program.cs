@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Microsoft.Win32;
 
 public class GetDotNetVersion
@@ -8,25 +9,39 @@ public class GetDotNetVersion
         Get45PlusFromRegistry();
     }
 
+    delegate string VersionChecker(RegistryKey ndpKey);
+
     private static void Get45PlusFromRegistry()
     {
-        const string subkey = @"SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full\";
-
-        using (var ndpKey = RegistryKey.OpenRemoteBaseKey(RegistryHive.LocalMachine, string.Empty).OpenSubKey(subkey))
+        Dictionary<string, VersionChecker> subkeys = new Dictionary<string, VersionChecker>
         {
-            if (ndpKey != null && ndpKey.GetValue("Release") != null)
+            { @"SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full\",       CheckFor45PlusVersion },
+            { @"SOFTWARE\Microsoft\NET Framework Setup\NDP\v3.5\",          CheckFor35OrEarlierVersion },
+            { @"SOFTWARE\Microsoft\NET Framework Setup\NDP\v3.0\",          CheckFor35OrEarlierVersion },
+            { @"SOFTWARE\Microsoft\NET Framework Setup\NDP\v2.0.50727\",    CheckFor35OrEarlierVersion }
+        };
+
+        using (var hklmKey = RegistryKey.OpenRemoteBaseKey(RegistryHive.LocalMachine, string.Empty))
+        {
+            foreach (var subkey in subkeys.Keys)
             {
-                Console.WriteLine($".NET Framework Version: {CheckFor45PlusVersion((int)ndpKey.GetValue("Release"))}");
-            }
-            else
-            {
-                Console.WriteLine(".NET Framework Version 4.5 or later is not detected.");
+                using (var ndpKey = hklmKey.OpenSubKey(subkey))
+                {
+                    var versionChecker = subkeys[subkey];
+                    var version = versionChecker(ndpKey);
+
+                    Console.WriteLine($".NET Framework Version: {version}");
+                }
             }
         }
-
-        // Checking the version using >= enables forward compatibility.
-        string CheckFor45PlusVersion(int releaseKey)
+    }
+    // Checking the version using >= enables forward compatibility.
+    static string CheckFor45PlusVersion(RegistryKey ndpKey)
+    {
+        if (ndpKey != null && ndpKey.GetValue("Release") != null)
         {
+            var releaseKey = (int) ndpKey.GetValue("Release");
+
             if (releaseKey >= 528040)
                 return "4.8 or later";
             if (releaseKey >= 461808)
@@ -49,8 +64,13 @@ public class GetDotNetVersion
                 return "4.5";
             // This code should never execute. A non-null release key should mean
             // that 4.5 or later is installed.
-            return "No 4.5 or later version detected";
         }
+        return null;
+    }
+
+    static string CheckFor35OrEarlierVersion(RegistryKey ndpKey)
+    {
+        return (string) ndpKey?.GetValue("Version");
     }
 }
 // This example displays output like the following:
