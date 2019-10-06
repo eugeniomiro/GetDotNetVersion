@@ -31,9 +31,12 @@ public class GetDotNetVersion
                     var version = versionChecker(ndpKey);
 
                     Console.WriteLine($".NET Framework Version: {version}");
+                   
                 }
             }
         }
+        Console.WriteLine("Press any key to exit");
+        Console.ReadKey();
     }
     // Checking the version using >= enables forward compatibility.
     static string CheckFor45PlusVersion(RegistryKey ndpKey)
